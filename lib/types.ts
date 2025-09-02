@@ -3,7 +3,7 @@ export interface Quiz {
   title: string
   description: string
   classCode: string
-  teacherName: string
+  teachers: Teacher[] // Changed from single teacherName to array of teachers
   questions: Question[]
   createdAt: Date
   isActive: boolean
@@ -36,10 +36,27 @@ export interface Answer {
   pointsEarned: number
 }
 
+export interface Teacher {
+  name: string
+  joinedAt: string
+  role: "creator" | "collaborator"
+}
+
 export interface ClassSession {
   classCode: string
-  quizId: string
-  teacherName: string
-  createdAt: Date
-  responses: StudentResponse[]
+  teachers: Teacher[] // Changed from single teacherName to array of teachers
+  activeStudents: ActiveStudent[]
+  kickedStudents: KickedStudent[]
+  createdAt: string
+}
+
+export interface ActiveStudent {
+  name: string
+  joinedAt: string
+  status: "active" | "taking-quiz" | "completed"
+}
+
+export interface KickedStudent {
+  name: string
+  kickedAt: string
 }

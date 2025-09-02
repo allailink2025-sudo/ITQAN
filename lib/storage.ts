@@ -31,6 +31,27 @@ export const storage = {
     return quizzes.find((q) => q.classCode === classCode && q.isActive) || null
   },
 
+  addTeacherToQuiz: (classCode: string, teacherName: string): boolean => {
+    const quizzes = storage.getQuizzes()
+    const quiz = quizzes.find((q) => q.classCode === classCode)
+
+    if (quiz && !quiz.teachers.some((t) => t.name === teacherName)) {
+      quiz.teachers.push({
+        name: teacherName,
+        joinedAt: new Date().toISOString(),
+        role: "collaborator",
+      })
+      storage.saveQuiz(quiz)
+      return true
+    }
+    return false
+  },
+
+  getQuizzesByTeacher: (teacherName: string): Quiz[] => {
+    const quizzes = storage.getQuizzes()
+    return quizzes.filter((q) => q.teachers.some((t) => t.name === teacherName))
+  },
+
   // Student response operations
   saveResponse: (response: StudentResponse): void => {
     const responses = storage.getResponses()
@@ -75,6 +96,7 @@ export const storage = {
   addActiveStudent: (classCode: string, studentName: string): void => {
     const session = storage.getSessionByClassCode(classCode) || {
       classCode,
+      teachers: [],
       activeStudents: [],
       kickedStudents: [],
       createdAt: new Date().toISOString(),
@@ -112,6 +134,26 @@ export const storage = {
     const session = storage.getSessionByClassCode(classCode)
     return session?.kickedStudents.some((s) => s.name === studentName) || false
   },
+
+  addTeacherToSession: (classCode: string, teacherName: string): void => {
+    const session = storage.getSessionByClassCode(classCode) || {
+      classCode,
+      teachers: [],
+      activeStudents: [],
+      kickedStudents: [],
+      createdAt: new Date().toISOString(),
+    }
+
+    if (!session.teachers.some((t) => t.name === teacherName)) {
+      session.teachers.push({
+        name: teacherName,
+        joinedAt: new Date().toISOString(),
+        role: session.teachers.length === 0 ? "creator" : "collaborator",
+      })
+    }
+
+    storage.saveSession(session)
+  },
 }
 
 // Utility function to generate unique IDs
@@ -124,6 +166,15 @@ export const generateClassCode = (): string => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
   let result = ""
   for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return result
+}
+
+export const generateUnifiedClassCode = (): string => {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+  let result = "CLASS-"
+  for (let i = 0; i < 4; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length))
   }
   return result
