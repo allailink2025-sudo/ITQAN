@@ -8,10 +8,12 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { BookOpen, Users, BarChart3, Zap, Sparkles, Bot, Rocket, Construction } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { TeacherAuthModal } from "@/components/teacher-auth-modal"
 
 export default function HomePage() {
   const [classCode, setClassCode] = useState("")
   const [studentName, setStudentName] = useState("")
+  const [showTeacherAuth, setShowTeacherAuth] = useState(false)
   const router = useRouter()
 
   const handleStudentJoin = () => {
@@ -21,7 +23,7 @@ export default function HomePage() {
   }
 
   const handleTeacherAccess = () => {
-    router.push("/teacher")
+    setShowTeacherAuth(true)
   }
 
   const handleAIQuizBuilder = () => {
@@ -217,6 +219,8 @@ export default function HomePage() {
           </div>
         </div>
       </main>
+
+      <TeacherAuthModal open={showTeacherAuth} onOpenChange={setShowTeacherAuth} />
     </div>
   )
 }

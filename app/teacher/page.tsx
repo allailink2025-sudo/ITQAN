@@ -3,8 +3,6 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -21,6 +19,8 @@ import {
   Star,
   Zap,
   BarChart3,
+  LogOut,
+  Shield,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { storage } from "@/lib/storage"
@@ -33,18 +33,32 @@ export default function TeacherDashboard() {
   const [teacherName, setTeacherName] = useState("")
   const [isNameSet, setIsNameSet] = useState(false)
   const [activeStudents, setActiveStudents] = useState<{ [key: string]: any[] }>({})
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authMethod, setAuthMethod] = useState("")
   const router = useRouter()
   const { toast } = useToast()
 
   useEffect(() => {
-    // Check if teacher name is stored
-    const storedName = localStorage.getItem("teacher-name")
-    if (storedName) {
-      setTeacherName(storedName)
-      setIsNameSet(true)
-      loadData()
+    const teacherAuth = localStorage.getItem("teacherAuth")
+    if (teacherAuth) {
+      try {
+        const auth = JSON.parse(teacherAuth)
+        if (auth.isAuthenticated) {
+          setIsAuthenticated(true)
+          setTeacherName(auth.name)
+          setAuthMethod(auth.method)
+          setIsNameSet(true)
+          loadData()
+        } else {
+          router.push("/")
+        }
+      } catch (error) {
+        router.push("/")
+      }
+    } else {
+      router.push("/")
     }
-  }, [])
+  }, [router])
 
   useEffect(() => {
     if (isNameSet) {
@@ -77,12 +91,14 @@ export default function TeacherDashboard() {
     setActiveStudents(studentsData)
   }
 
-  const handleSetName = () => {
-    if (teacherName.trim()) {
-      localStorage.setItem("teacher-name", teacherName)
-      setIsNameSet(true)
-      loadData()
-    }
+  const handleLogout = () => {
+    localStorage.removeItem("teacherAuth")
+    localStorage.removeItem("teacher-name")
+    toast({
+      title: "تم تسجيل الخروج",
+      description: "تم تسجيل خروجك بنجاح من لوحة المعلم",
+    })
+    router.push("/")
   }
 
   const copyClassCode = (classCode: string) => {
@@ -115,28 +131,13 @@ export default function TeacherDashboard() {
     }
   }
 
-  if (!isNameSet) {
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-center">مرحباً بك في لوحة المعلم</CardTitle>
-            <CardDescription className="text-center">يرجى إدخال اسمك للمتابعة</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="teacherName">اسم المعلم</Label>
-              <Input
-                id="teacherName"
-                placeholder="أدخل اسمك"
-                value={teacherName}
-                onChange={(e) => setTeacherName(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleSetName()}
-              />
-            </div>
-            <Button onClick={handleSetName} className="w-full" disabled={!teacherName.trim()}>
-              متابعة
-            </Button>
+          <CardContent className="text-center py-8">
+            <Shield className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+            <p>جاري التحقق من صلاحية الوصول...</p>
           </CardContent>
         </Card>
       </div>
@@ -153,13 +154,30 @@ export default function TeacherDashboard() {
               <BookOpen className="h-8 w-8 text-blue-600" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">لوحة المعلم</h1>
-                <p className="text-sm text-gray-600">مرحباً {teacherName}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-gray-600">مرحباً {teacherName}</p>
+                  <Badge variant="outline" className="text-xs">
+                    {authMethod === "master" && "رمز رئيسي"}
+                    {authMethod === "school" && "رمز مدرسة"}
+                    {authMethod === "personal" && "رمز شخصي"}
+                  </Badge>
+                </div>
               </div>
             </div>
-            <Button onClick={() => router.push("/teacher/create")} className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="h-4 w-4 mr-2" />
-              إنشاء نشاط جديد
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button onClick={() => router.push("/teacher/create")} className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="h-4 w-4 mr-2" />
+                إنشاء نشاط جديد
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleLogout}
+                className="text-red-600 hover:text-red-700 bg-transparent"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                تسجيل الخروج
+              </Button>
+            </div>
           </div>
         </div>
       </header>
