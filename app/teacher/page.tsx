@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Slider } from "@/components/ui/slider"
 import {
   BookOpen,
   Plus,
@@ -21,6 +25,14 @@ import {
   BarChart3,
   LogOut,
   Shield,
+  Settings,
+  Download,
+  Palette,
+  Timer,
+  FileText,
+  Moon,
+  Sun,
+  Database,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { storage } from "@/lib/storage"
@@ -35,6 +47,21 @@ export default function TeacherDashboard() {
   const [activeStudents, setActiveStudents] = useState<{ [key: string]: any[] }>({})
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [authMethod, setAuthMethod] = useState("")
+
+  const [settings, setSettings] = useState({
+    darkMode: false,
+    notifications: true,
+    autoSave: true,
+    language: "ar",
+    soundEffects: true,
+    defaultQuizTimer: 30,
+    questionShuffle: false,
+    showCorrectAnswers: true,
+    allowRetakes: false,
+    exportFormat: "csv",
+    theme: "blue",
+  })
+
   const router = useRouter()
   const { toast } = useToast()
 
@@ -49,6 +76,7 @@ export default function TeacherDashboard() {
           setAuthMethod(auth.method)
           setIsNameSet(true)
           loadData()
+          loadSettings()
         } else {
           router.push("/")
         }
@@ -131,6 +159,58 @@ export default function TeacherDashboard() {
     }
   }
 
+  const loadSettings = () => {
+    const savedSettings = localStorage.getItem("teacherSettings")
+    if (savedSettings) {
+      setSettings({ ...settings, ...JSON.parse(savedSettings) })
+    }
+  }
+
+  const saveSettings = (newSettings: typeof settings) => {
+    setSettings(newSettings)
+    localStorage.setItem("teacherSettings", JSON.stringify(newSettings))
+    toast({
+      title: "تم حفظ الإعدادات",
+      description: "تم حفظ إعداداتك بنجاح",
+    })
+  }
+
+  const exportResults = (format: string) => {
+    const data = responses.map((response) => {
+      const quiz = quizzes.find((q) => q.id === response.quizId)
+      return {
+        studentName: response.studentName,
+        quizTitle: quiz?.title || "غير معروف",
+        score: response.score,
+        totalPoints: response.totalPoints,
+        percentage: Math.round((response.score / response.totalPoints) * 100),
+        completedAt: new Date(response.completedAt).toLocaleDateString("ar"),
+        timeSpent: Math.round(response.timeSpent / 60),
+      }
+    })
+
+    if (format === "csv") {
+      const csv = [
+        "اسم الطالب,عنوان النشاط,النقاط,إجمالي النقاط,النسبة المئوية,تاريخ الإكمال,الوقت المستغرق (دقيقة)",
+        ...data.map(
+          (row) =>
+            `${row.studentName},${row.quizTitle},${row.score},${row.totalPoints},${row.percentage}%,${row.completedAt},${row.timeSpent}`,
+        ),
+      ].join("\n")
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+      const link = document.createElement("a")
+      link.href = URL.createObjectURL(blob)
+      link.download = `نتائج_الطلاب_${new Date().toLocaleDateString("ar")}.csv`
+      link.click()
+    }
+
+    toast({
+      title: "تم تصدير النتائج",
+      description: `تم تصدير ${data.length} نتيجة بصيغة ${format.toUpperCase()}`,
+    })
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
@@ -145,17 +225,19 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div
+      className={`min-h-screen transition-colors duration-300 ${settings.darkMode ? "dark bg-gray-900" : "bg-gradient-to-br from-blue-50 to-indigo-100"}`}
+    >
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <BookOpen className="h-8 w-8 text-blue-600" />
+              <BookOpen className="h-8 w-8 text-primary" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">لوحة المعلم</h1>
+                <h1 className="text-2xl font-bold text-foreground">لوحة المعلم المتطورة</h1>
                 <div className="flex items-center gap-2">
-                  <p className="text-sm text-gray-600">مرحباً {teacherName}</p>
+                  <p className="text-sm text-muted-foreground">مرحباً {teacherName}</p>
                   <Badge variant="outline" className="text-xs">
                     {authMethod === "master" && "رمز رئيسي"}
                     {authMethod === "school" && "رمز مدرسة"}
@@ -165,14 +247,14 @@ export default function TeacherDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button onClick={() => router.push("/teacher/create")} className="bg-blue-600 hover:bg-blue-700">
+              <Button onClick={() => router.push("/teacher/create")} className="gradient-primary">
                 <Plus className="h-4 w-4 mr-2" />
                 إنشاء نشاط جديد
               </Button>
               <Button
                 variant="outline"
                 onClick={handleLogout}
-                className="text-red-600 hover:text-red-700 bg-transparent"
+                className="text-destructive hover:text-destructive-foreground hover:bg-destructive bg-transparent"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 تسجيل الخروج
@@ -185,11 +267,12 @@ export default function TeacherDashboard() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6 bg-card">
             <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
             <TabsTrigger value="quizzes">الأنشطة</TabsTrigger>
             <TabsTrigger value="live">إدارة الفصل المباشر</TabsTrigger>
             <TabsTrigger value="analytics">التحليلات</TabsTrigger>
+            <TabsTrigger value="settings">الإعدادات</TabsTrigger>
             <TabsTrigger value="coming-soon">ميزات قادمة</TabsTrigger>
           </TabsList>
 
@@ -353,6 +436,7 @@ export default function TeacherDashboard() {
             )}
           </TabsContent>
 
+          {/* Live Tab */}
           <TabsContent value="live" className="space-y-6">
             <Card>
               <CardHeader>
@@ -498,6 +582,259 @@ export default function TeacherDashboard() {
             </Card>
           </TabsContent>
 
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* General Settings */}
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    الإعدادات العامة
+                  </CardTitle>
+                  <CardDescription>تخصيص تجربة استخدام المنصة</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">الوضع الليلي</Label>
+                      <p className="text-sm text-muted-foreground">تفعيل المظهر الداكن</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Sun className="h-4 w-4" />
+                      <Switch
+                        checked={settings.darkMode}
+                        onCheckedChange={(checked) => saveSettings({ ...settings, darkMode: checked })}
+                      />
+                      <Moon className="h-4 w-4" />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">الإشعارات</Label>
+                      <p className="text-sm text-muted-foreground">تلقي إشعارات عند إجابة الطلاب</p>
+                    </div>
+                    <Switch
+                      checked={settings.notifications}
+                      onCheckedChange={(checked) => saveSettings({ ...settings, notifications: checked })}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">الحفظ التلقائي</Label>
+                      <p className="text-sm text-muted-foreground">حفظ التغييرات تلقائياً</p>
+                    </div>
+                    <Switch
+                      checked={settings.autoSave}
+                      onCheckedChange={(checked) => saveSettings({ ...settings, autoSave: checked })}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">المؤثرات الصوتية</Label>
+                      <p className="text-sm text-muted-foreground">تشغيل الأصوات عند الإجراءات</p>
+                    </div>
+                    <Switch
+                      checked={settings.soundEffects}
+                      onCheckedChange={(checked) => saveSettings({ ...settings, soundEffects: checked })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-base">اللغة</Label>
+                    <Select
+                      value={settings.language}
+                      onValueChange={(value) => saveSettings({ ...settings, language: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ar">العربية</SelectItem>
+                        <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="fr">Français</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Quiz Settings */}
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Timer className="h-5 w-5" />
+                    إعدادات الأنشطة
+                  </CardTitle>
+                  <CardDescription>تخصيص سلوك الأنشطة والاختبارات</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-2">
+                    <Label className="text-base">الوقت الافتراضي للنشاط (دقيقة)</Label>
+                    <div className="px-3">
+                      <Slider
+                        value={[settings.defaultQuizTimer]}
+                        onValueChange={([value]) => saveSettings({ ...settings, defaultQuizTimer: value })}
+                        max={120}
+                        min={5}
+                        step={5}
+                        className="w-full"
+                      />
+                      <div className="flex justify-between text-sm text-muted-foreground mt-1">
+                        <span>5 دقائق</span>
+                        <span className="font-medium">{settings.defaultQuizTimer} دقيقة</span>
+                        <span>120 دقيقة</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">خلط الأسئلة</Label>
+                      <p className="text-sm text-muted-foreground">عرض الأسئلة بترتيب عشوائي</p>
+                    </div>
+                    <Switch
+                      checked={settings.questionShuffle}
+                      onCheckedChange={(checked) => saveSettings({ ...settings, questionShuffle: checked })}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">إظهار الإجابات الصحيحة</Label>
+                      <p className="text-sm text-muted-foreground">عرض الإجابات الصحيحة بعد الانتهاء</p>
+                    </div>
+                    <Switch
+                      checked={settings.showCorrectAnswers}
+                      onCheckedChange={(checked) => saveSettings({ ...settings, showCorrectAnswers: checked })}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">السماح بإعادة المحاولة</Label>
+                      <p className="text-sm text-muted-foreground">السماح للطلاب بإعادة النشاط</p>
+                    </div>
+                    <Switch
+                      checked={settings.allowRetakes}
+                      onCheckedChange={(checked) => saveSettings({ ...settings, allowRetakes: checked })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-base">صيغة التصدير الافتراضية</Label>
+                    <Select
+                      value={settings.exportFormat}
+                      onValueChange={(value) => saveSettings({ ...settings, exportFormat: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="csv">CSV</SelectItem>
+                        <SelectItem value="pdf">PDF</SelectItem>
+                        <SelectItem value="excel">Excel</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Export & Data Management */}
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Download className="h-5 w-5" />
+                    إدارة البيانات
+                  </CardTitle>
+                  <CardDescription>تصدير وإدارة بيانات الطلاب والنتائج</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Button onClick={() => exportResults("csv")} className="w-full justify-start" variant="outline">
+                    <FileText className="h-4 w-4 mr-2" />
+                    تصدير جميع النتائج (CSV)
+                  </Button>
+
+                  <Button onClick={() => exportResults("pdf")} className="w-full justify-start" variant="outline">
+                    <FileText className="h-4 w-4 mr-2" />
+                    تصدير تقرير شامل (PDF)
+                  </Button>
+
+                  <Button
+                    onClick={() => {
+                      const backup = {
+                        quizzes,
+                        responses,
+                        settings,
+                        exportDate: new Date().toISOString(),
+                      }
+                      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" })
+                      const link = document.createElement("a")
+                      link.href = URL.createObjectURL(blob)
+                      link.download = `نسخة_احتياطية_${new Date().toLocaleDateString("ar")}.json`
+                      link.click()
+                      toast({
+                        title: "تم إنشاء النسخة الاحتياطية",
+                        description: "تم حفظ جميع بياناتك بنجاح",
+                      })
+                    }}
+                    className="w-full justify-start"
+                    variant="outline"
+                  >
+                    <Database className="h-4 w-4 mr-2" />
+                    إنشاء نسخة احتياطية
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Theme Customization */}
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Palette className="h-5 w-5" />
+                    تخصيص المظهر
+                  </CardTitle>
+                  <CardDescription>اختر الألوان والمظهر المفضل</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-base">نمط الألوان</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {["blue", "purple", "green"].map((theme) => (
+                        <Button
+                          key={theme}
+                          variant={settings.theme === theme ? "default" : "outline"}
+                          onClick={() => saveSettings({ ...settings, theme })}
+                          className="h-12"
+                        >
+                          <div
+                            className={`w-4 h-4 rounded-full mr-2 ${
+                              theme === "blue" ? "bg-blue-500" : theme === "purple" ? "bg-purple-500" : "bg-green-500"
+                            }`}
+                          />
+                          {theme === "blue" ? "أزرق" : theme === "purple" ? "بنفسجي" : "أخضر"}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="p-4 border rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
+                    <h4 className="font-medium mb-2">معاينة المظهر</h4>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded bg-primary"></div>
+                      <div className="w-8 h-8 rounded bg-secondary"></div>
+                      <div className="w-8 h-8 rounded bg-accent"></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Coming Soon Tab */}
           <TabsContent value="coming-soon" className="space-y-6">
             <Card>
               <CardHeader>
