@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { BookOpen, Users, BarChart3, Zap, Sparkles, Bot, Rocket, Construction } from "lucide-react"
+import { Users, BarChart3, Zap, Sparkles, Bot, Rocket, Construction } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { TeacherAuthModal } from "@/components/teacher-auth-modal"
 
@@ -45,7 +45,9 @@ export default function HomePage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="gradient-primary p-2 rounded-xl">
-                <BookOpen className="h-8 w-8 text-white" />
+                <div className="h-8 w-8 flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">إتقان</span>
+                </div>
               </div>
               <div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
@@ -128,7 +130,7 @@ export default function HomePage() {
           <Card className="glass-card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
             <CardHeader>
               <CardTitle className="flex items-center justify-between text-right">
-                <BookOpen className="h-6 w-6 text-primary" />
+                <Bot className="h-6 w-6 text-primary" />
                 <span>لوحة المعلم</span>
               </CardTitle>
               <CardDescription className="text-right">أنشئ أنشطة جديدة وتابع نتائج طلابك</CardDescription>
